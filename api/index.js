@@ -27,7 +27,7 @@ res.setHeader('Access-Control-Allow-Origin', '*');
         // Response header set karein
         res.writeHead(200, { 'Content-Type': 'application/json' });
         // JSON array ko string mein convert karke bhejein
-        res.end(JSON.stringify(users));
+        res.end(JSON.stringify(users, null, 2));
         
     } else if (path === '/api/yolo') {
         const randomUser = {
@@ -43,7 +43,7 @@ res.setHeader('Access-Control-Allow-Origin', '*');
             attitude: 'YOLO! 🦈'
         };
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(randomUser));
+        res.end(JSON.stringify(randomUser, null, 2));
     } else {
         res.writeHead(200, { 'Content-Type': 'text/plain' });
         res.end('Hello from the server! Access /api/data to get users.');
