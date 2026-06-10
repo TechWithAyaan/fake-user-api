@@ -9,9 +9,10 @@ const { faker } = require('@faker-js/faker');
  * @faker-js/faker. Intended for front-end prototyping, testing, and demos.
  *
  * Endpoints:
- *   GET /api/health  — Health check; returns service status and timestamp.
- *   GET /api/data    — Returns an array of 1 000 randomly generated users.
- *   GET /api/yolo    — Returns a single randomly generated user.
+ *   GET /api/health   — Health check; returns service status and timestamp.
+ *   GET /api/data     — Returns an array of 1 000 randomly generated users.
+ *   GET /api/yolo     — Returns a single randomly generated user.
+ *   GET /api/search   — Fuzzy-search users by first name, last name, or email.
  */
 
 /**
@@ -152,6 +153,46 @@ const server = http.createServer((req, res) => {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(randomUser, null, 2));
 
+    } else if (path.startsWith('/api/search')) {
+        /**
+         * GET /api/search?q=<term>
+         * Searches all 1 000 generated users by first name, last name, or email
+         * using a case-insensitive substring match.
+         *
+         * Query parameters:
+         *   q  {string}  Required. The search term to match against.
+         *
+         * Response 200: { query: string, results: User[], total: number }
+         * Response 400: { error: string }
+         */
+        const parsedUrl = url.parse(req.url, true);
+        const query = parsedUrl.query;
+        const searchTerm = query.q || '';
+
+        if (!searchTerm) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Missing query parameter: q' }, null, 2));
+            return;
+        }
+
+        const users = [];
+        for (let i = 1; i <= 1000; i++) {
+            users.push(buildUser(i));
+        }
+
+        const results = users.filter(u =>
+            u.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            u.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            u.email.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+            query: searchTerm,
+            results: results.slice(0, 50),
+            total: results.length
+        }, null, 2));
+
     } else {
         /**
          * Catch-all — unknown route.
@@ -160,8 +201,8 @@ const server = http.createServer((req, res) => {
         res.writeHead(404, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
             error: 'Not Found',
-            message: 'Use /api/data or /api/yolo endpoints',
-            availableEndpoints: ['/api/health', '/api/data', '/api/yolo']
+            message: 'Use /api/data, /api/yolo, or /api/search endpoints',
+            availableEndpoints: ['/api/health', '/api/data', '/api/yolo', '/api/search']
         }, null, 2));
     }
 });
