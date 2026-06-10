@@ -1,4 +1,5 @@
 const http = require('http');
+const url = require('url');
 const { faker } = require('@faker-js/faker');
 
 /**
@@ -81,20 +82,61 @@ const server = http.createServer((req, res) => {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ status: 'healthy', timestamp: new Date().toISOString() }, null, 2));
 
-    } else if (path === '/api/data') {
+    } else if (path.startsWith('/api/data')) {
         /**
          * GET /api/data
-         * Returns an array of 1 000 randomly generated user objects.
+         * Returns a paginated, filterable list of generated user objects.
          *
-         * Response 200: User[]
+         * Query parameters:
+         *   limit   {number}  Max records per page (default: 1000)
+         *   page    {number}  1-based page number (default: 1)
+         *   city    {string}  Filter by city name (case-insensitive substring)
+         *   job     {string}  Filter by job title (case-insensitive substring)
+         *   minAge  {number}  Minimum age (inclusive)
+         *   maxAge  {number}  Maximum age (inclusive)
+         *
+         * Response 200: { data: User[], pagination: {...}, filters: {...} }
          */
-        const limit = 1000;
+        const parsedUrl = url.parse(req.url, true);
+        const query = parsedUrl.query;
+        const limit = parseInt(query.limit) || 1000;
+        const page = parseInt(query.page) || 1;
+        const filterCity = query.city;
+        const filterJob = query.job;
+        const minAge = parseInt(query.minAge);
+        const maxAge = parseInt(query.maxAge);
+
         const users = [];
-        for (let i = 1; i <= limit; i++) {
+        for (let i = 1; i <= 1000; i++) {
             users.push(buildUser(i));
         }
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(users, null, 2));
+
+        let filtered = users;
+        if (filterCity) filtered = filtered.filter(u => u.city.toLowerCase().includes(filterCity.toLowerCase()));
+        if (filterJob) filtered = filtered.filter(u => u.jobTitle.toLowerCase().includes(filterJob.toLowerCase()));
+        if (!isNaN(minAge)) filtered = filtered.filter(u => u.age >= minAge);
+        if (!isNaN(maxAge)) filtered = filtered.filter(u => u.age <= maxAge);
+
+        const start = (page - 1) * limit;
+        const paginatedUsers = filtered.slice(start, start + limit);
+
+        const response = {
+            data: paginatedUsers,
+            pagination: {
+                page,
+                limit,
+                total: filtered.length,
+                pages: Math.ceil(filtered.length / limit)
+            },
+            filters: {
+                city: filterCity || null,
+                job: filterJob || null,
+                ageRange: { min: minAge || null, max: maxAge || null }
+            }
+        };
+
+        res.writeHead(200, { 'Content-Type': 'application/json', 'X-RateLimit-Limit': '100', 'X-RateLimit-Remaining': '99' });
+        res.end(JSON.stringify(response, null, 2));
 
     } else if (path === '/api/yolo') {
         /**
