@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "start": "node api/index.js"
+  },
   "dependencies": {
     "@faker-js/faker": "^10.4.0",
     "faker": "^5.5.3"
