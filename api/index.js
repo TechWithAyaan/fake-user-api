@@ -12,6 +12,7 @@ const { faker } = require('@faker-js/faker');
  *   GET /api/health  — Health check; returns service status and timestamp.
  *   GET /api/data    — Returns an array of 1 000 randomly generated users.
  *   GET /api/yolo    — Returns a single randomly generated user.
+ *   GET /api/stats   — Returns aggregate statistics across 1 000 generated users.
  */
 
 /**
@@ -138,6 +139,44 @@ const server = http.createServer((req, res) => {
         res.writeHead(200, { 'Content-Type': 'application/json', 'X-RateLimit-Limit': '100', 'X-RateLimit-Remaining': '99' });
         res.end(JSON.stringify(response, null, 2));
 
+    } else if (path === '/api/stats') {
+        /**
+         * GET /api/stats
+         * Returns aggregate statistics computed across 1 000 generated users.
+         *
+         * Response 200:
+         *   {
+         *     totalUsers:       number,
+         *     averageAge:       number,
+         *     activeUsers:      number,
+         *     cities:           number,   // unique city count
+         *     jobs:             number,   // unique job-title count
+         *     ageDistribution:  { '18-25': number, '26-35': number,
+         *                         '36-45': number, '46-60': number }
+         *   }
+         */
+        const users = [];
+        for (let i = 1; i <= 1000; i++) {
+            users.push(buildUser(i));
+        }
+
+        const stats = {
+            totalUsers: users.length,
+            averageAge: Math.round(users.reduce((sum, u) => sum + u.age, 0) / users.length),
+            activeUsers: users.filter(u => u.isActive).length,
+            cities: [...new Set(users.map(u => u.city))].length,
+            jobs: [...new Set(users.map(u => u.jobTitle))].length,
+            ageDistribution: {
+                '18-25': users.filter(u => u.age >= 18 && u.age <= 25).length,
+                '26-35': users.filter(u => u.age >= 26 && u.age <= 35).length,
+                '36-45': users.filter(u => u.age >= 36 && u.age <= 45).length,
+                '46-60': users.filter(u => u.age >= 46 && u.age <= 60).length
+            }
+        };
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(stats, null, 2));
+
     } else if (path === '/api/yolo') {
         /**
          * GET /api/yolo
@@ -160,8 +199,8 @@ const server = http.createServer((req, res) => {
         res.writeHead(404, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
             error: 'Not Found',
-            message: 'Use /api/data or /api/yolo endpoints',
-            availableEndpoints: ['/api/health', '/api/data', '/api/yolo']
+            message: 'Use /api/data, /api/yolo, or /api/stats endpoints',
+            availableEndpoints: ['/api/health', '/api/data', '/api/yolo', '/api/stats']
         }, null, 2));
     }
 });
