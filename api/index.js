@@ -29,6 +29,21 @@ res.setHeader('Access-Control-Allow-Origin', '*');
         // JSON array ko string mein convert karke bhejein
         res.end(JSON.stringify(users));
         
+    } else if (path === '/api/yolo') {
+        const randomUser = {
+            id: Math.floor(Math.random() * 1000) + 1,
+            firstName: faker.person.firstName(),
+            lastName: faker.person.lastName(),
+            email: faker.internet.email(),
+            phone: faker.phone.number(),
+            age: faker.number.int({ min: 18, max: 60 }),
+            jobTitle: faker.person.jobTitle(),
+            city: faker.location.city(),
+            isActive: faker.datatype.boolean(),
+            attitude: 'YOLO! 🦈'
+        };
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(randomUser));
     } else {
         res.writeHead(200, { 'Content-Type': 'text/plain' });
         res.end('Hello from the server! Access /api/data to get users.');
